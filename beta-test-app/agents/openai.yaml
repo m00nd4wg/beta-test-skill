@@ -1,0 +1,4 @@
+interface:
+  display_name: "Beta Test App"
+  short_description: "Realistic repeated beta-testing"
+  default_prompt: "Use $beta-test-app to beta test my app and summarize repeated user-experience issues."
