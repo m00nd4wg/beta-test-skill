@@ -8,6 +8,7 @@ Use this template for an optional human-readable note alongside the JSON report.
 Tested: <app_url>
 Persona: <label>
 Viewport: <device_label> (<width>x<height>)
+Schema: 2.0
 
 ## What I Tried
 
@@ -20,9 +21,15 @@ Viewport: <device_label> (<width>x<height>)
 
 ## Issues Noticed
 
-| Severity | Category | Issue | Where | Reaction |
-| --- | --- | --- | --- | --- |
-| medium | usability | <title> | <where_seen> | <tester_reaction> |
+| Severity | Category | Friction | Issue | Where | Reaction |
+| --- | --- | ---: | --- | --- | --- |
+| medium | usability | 3 | <title> | <where_seen> | <tester_reaction> |
+
+## Evidence
+
+- Screenshots: <paths or none>
+- Console/network notes: <short notes or none>
+- Perceived latency: <duration or none>
 
 ## Overall Sentiment
 

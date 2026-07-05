@@ -1,0 +1,114 @@
+{
+  "schema_version": "2.0",
+  "run_id": "run-002",
+  "timestamp": "2026-07-05T10:10:00Z",
+  "app_url": "http://localhost:4173",
+  "app_context": "A demo SaaS landing page and checkout flow for indie builders.",
+  "persona": {
+    "label": "Non-technical solo founder",
+    "context": "Needs to know if the tool can help before paying for another AI product.",
+    "technical_comfort": "low",
+    "domain_familiarity": "medium",
+    "goals": [
+      "Understand what the product does",
+      "Check whether pricing feels safe",
+      "Try the mobile navigation"
+    ],
+    "biases": [
+      "Gets anxious about unclear billing and hidden terms"
+    ]
+  },
+  "viewport": {
+    "device_label": "mobile",
+    "width": 390,
+    "height": 844
+  },
+  "tasks_attempted": [
+    "Read the hero",
+    "Find pricing",
+    "Start signup"
+  ],
+  "task_outcomes": [
+    {
+      "task": "Find pricing",
+      "status": "failed",
+      "notes": "Pricing was easy on desktop but hidden in the mobile layout.",
+      "friction_score": 4
+    },
+    {
+      "task": "Start signup",
+      "status": "partial",
+      "notes": "After tapping the CTA, the page did not immediately confirm the tap.",
+      "friction_score": 3,
+      "duration_ms": 3800
+    }
+  ],
+  "issues": [
+    {
+      "title": "Mobile navigation hides pricing",
+      "fingerprint": "mobile-pricing-link-hidden",
+      "category": "conversion",
+      "severity": "high",
+      "confidence": "high",
+      "where_seen": "Mobile header",
+      "steps_to_reproduce": [
+        "Open the page at 390px width",
+        "Look for pricing from the top navigation",
+        "Try to compare plan cost before signup"
+      ],
+      "expected": "Pricing should be reachable on mobile before signup.",
+      "actual": "The mobile header showed no pricing link or menu.",
+      "evidence": [
+        "Pricing link visible on desktop, absent on mobile header"
+      ],
+      "tester_reaction": "I would worry this is hiding the price until after I sign up.",
+      "friction_score": 4,
+      "screenshots": [
+        "evidence/run-002-mobile.png"
+      ],
+      "console_errors": [],
+      "network_errors": []
+    },
+    {
+      "title": "Signup button has no loading state",
+      "fingerprint": "signup-cta-no-progress-feedback",
+      "category": "performance",
+      "severity": "medium",
+      "confidence": "medium",
+      "confidence_rationale": "Observed during mobile signup attempt, but not measured with lab tooling.",
+      "where_seen": "Mobile hero CTA",
+      "steps_to_reproduce": [
+        "Open the mobile landing page",
+        "Tap Start beta test"
+      ],
+      "expected": "The button should immediately show that the tap was received.",
+      "actual": "The CTA looked unchanged for several seconds.",
+      "evidence": [
+        "Observed no loading or disabled state after tap"
+      ],
+      "tester_reaction": "I thought maybe my phone missed the tap.",
+      "friction_score": 3,
+      "perceived_latency_ms": 3800,
+      "screenshots": [
+        "evidence/run-002-mobile.png"
+      ],
+      "console_errors": [],
+      "network_errors": []
+    }
+  ],
+  "overall_sentiment": "I like the concept, but on mobile I felt less sure because pricing disappeared and signup felt unresponsive.",
+  "top_recommendations": [
+    "Add pricing access to the mobile header.",
+    "Add immediate progress feedback to the primary CTA."
+  ],
+  "assumptions": [
+    "The demo app is safe test data."
+  ],
+  "safety_notes": [
+    "No payment or production action was attempted."
+  ],
+  "evidence_manifest_paths": [
+    "evidence/manifest.json"
+  ]
+}
+

@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+node_modules/
+playwright-report/
+test-results/
+beta-test-results/
+beta-test-summary/
+.DS_Store

@@ -1,0 +1,24 @@
+name: Bug report
+description: Report a problem with the skill, scripts, or runner.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the command, prompt, report, or output that behaved incorrectly.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Codex, Claude Code, operating system, Python version, Node version, and browser runner details if relevant.
+

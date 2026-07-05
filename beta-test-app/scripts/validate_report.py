@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 
+SCHEMA_VERSION = "2.0"
 CATEGORIES = {
     "bug",
     "usability",
@@ -23,13 +25,14 @@ CATEGORIES = {
     "conversion",
     "other",
 }
-
 SEVERITIES = {"blocker", "high", "medium", "low", "note"}
 CONFIDENCES = {"high", "medium", "low"}
-TECHNICAL_COMFORT = {"low", "medium", "high"}
+COMFORT_LEVELS = {"low", "medium", "high"}
 TASK_STATUSES = {"success", "partial", "failed", "blocked", "abandoned", "not-attempted"}
+FINGERPRINT_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 REQUIRED_TOP_LEVEL = [
+    "schema_version",
     "run_id",
     "timestamp",
     "app_url",
@@ -55,13 +58,16 @@ REQUIRED_ISSUE_FIELDS = [
     "tester_reaction",
 ]
 
+OPTIONAL_STRING_LISTS = ["assumptions", "safety_notes", "evidence_manifest_paths"]
+OPTIONAL_ISSUE_STRING_LISTS = ["screenshots", "console_errors", "network_errors"]
+
 
 def non_empty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
-def list_of_strings(value: Any) -> bool:
-    return isinstance(value, list) and all(non_empty_string(item) for item in value)
+def list_of_strings(value: Any, *, allow_empty: bool = True) -> bool:
+    return isinstance(value, list) and (allow_empty or len(value) > 0) and all(non_empty_string(item) for item in value)
 
 
 def add_error(errors: list[str], path: str, message: str) -> None:
@@ -79,6 +85,16 @@ def validate_timestamp(value: Any, errors: list[str]) -> None:
         add_error(errors, "timestamp", "must parse as ISO-8601")
 
 
+def validate_int_range(value: Any, path: str, errors: list[str], *, minimum: int, maximum: int | None = None) -> None:
+    if not isinstance(value, int) or isinstance(value, bool):
+        add_error(errors, path, "must be an integer")
+        return
+    if value < minimum:
+        add_error(errors, path, f"must be >= {minimum}")
+    if maximum is not None and value > maximum:
+        add_error(errors, path, f"must be <= {maximum}")
+
+
 def validate_persona(value: Any, errors: list[str]) -> None:
     if not isinstance(value, dict):
         add_error(errors, "persona", "must be an object")
@@ -86,14 +102,17 @@ def validate_persona(value: Any, errors: list[str]) -> None:
     for field in ["label", "context", "technical_comfort", "goals"]:
         if field not in value:
             add_error(errors, f"persona.{field}", "is required")
-    if "label" in value and not non_empty_string(value["label"]):
-        add_error(errors, "persona.label", "must be a non-empty string")
-    if "context" in value and not non_empty_string(value["context"]):
-        add_error(errors, "persona.context", "must be a non-empty string")
-    if "technical_comfort" in value and value["technical_comfort"] not in TECHNICAL_COMFORT:
-        add_error(errors, "persona.technical_comfort", f"must be one of {sorted(TECHNICAL_COMFORT)}")
-    if "goals" in value and not list_of_strings(value["goals"]):
-        add_error(errors, "persona.goals", "must be an array of non-empty strings")
+    for field in ["label", "context"]:
+        if field in value and not non_empty_string(value[field]):
+            add_error(errors, f"persona.{field}", "must be a non-empty string")
+    if "technical_comfort" in value and value["technical_comfort"] not in COMFORT_LEVELS:
+        add_error(errors, "persona.technical_comfort", f"must be one of {sorted(COMFORT_LEVELS)}")
+    if "domain_familiarity" in value and value["domain_familiarity"] not in COMFORT_LEVELS:
+        add_error(errors, "persona.domain_familiarity", f"must be one of {sorted(COMFORT_LEVELS)}")
+    if "goals" in value and not list_of_strings(value["goals"], allow_empty=False):
+        add_error(errors, "persona.goals", "must be a non-empty array of non-empty strings")
+    if "biases" in value and not list_of_strings(value["biases"]):
+        add_error(errors, "persona.biases", "must be an array of non-empty strings")
 
 
 def validate_viewport(value: Any, errors: list[str]) -> None:
@@ -106,8 +125,8 @@ def validate_viewport(value: Any, errors: list[str]) -> None:
     if "device_label" in value and not non_empty_string(value["device_label"]):
         add_error(errors, "viewport.device_label", "must be a non-empty string")
     for field in ["width", "height"]:
-        if field in value and (not isinstance(value[field], int) or value[field] <= 0):
-            add_error(errors, f"viewport.{field}", "must be a positive integer")
+        if field in value:
+            validate_int_range(value[field], f"viewport.{field}", errors, minimum=1)
 
 
 def validate_task_outcomes(value: Any, errors: list[str]) -> None:
@@ -128,6 +147,18 @@ def validate_task_outcomes(value: Any, errors: list[str]) -> None:
             add_error(errors, f"{path}.status", f"must be one of {sorted(TASK_STATUSES)}")
         if "notes" in outcome and not non_empty_string(outcome["notes"]):
             add_error(errors, f"{path}.notes", "must be a non-empty string")
+        if "friction_score" in outcome:
+            validate_int_range(outcome["friction_score"], f"{path}.friction_score", errors, minimum=0, maximum=5)
+        if "duration_ms" in outcome:
+            validate_int_range(outcome["duration_ms"], f"{path}.duration_ms", errors, minimum=0)
+
+
+def validate_fingerprint(value: Any, path: str, errors: list[str]) -> None:
+    if not non_empty_string(value):
+        add_error(errors, path, "must be a non-empty string")
+        return
+    if not FINGERPRINT_PATTERN.match(value):
+        add_error(errors, path, "must be lowercase alphanumeric words separated by single hyphens")
 
 
 def validate_issues(value: Any, errors: list[str]) -> None:
@@ -151,10 +182,23 @@ def validate_issues(value: Any, errors: list[str]) -> None:
             add_error(errors, f"{path}.severity", f"must be one of {sorted(SEVERITIES)}")
         if "confidence" in issue and issue["confidence"] not in CONFIDENCES:
             add_error(errors, f"{path}.confidence", f"must be one of {sorted(CONFIDENCES)}")
-        if "steps_to_reproduce" in issue and not list_of_strings(issue["steps_to_reproduce"]):
-            add_error(errors, f"{path}.steps_to_reproduce", "must be an array of non-empty strings")
-        if "evidence" in issue and not list_of_strings(issue["evidence"]):
-            add_error(errors, f"{path}.evidence", "must be an array of non-empty strings")
+        if "steps_to_reproduce" in issue and not list_of_strings(issue["steps_to_reproduce"], allow_empty=False):
+            add_error(errors, f"{path}.steps_to_reproduce", "must be a non-empty array of non-empty strings")
+        if "evidence" in issue and not list_of_strings(issue["evidence"], allow_empty=False):
+            add_error(errors, f"{path}.evidence", "must be a non-empty array of non-empty strings")
+        if "fingerprint" in issue:
+            validate_fingerprint(issue["fingerprint"], f"{path}.fingerprint", errors)
+        if issue.get("confidence") in {"low", "medium"} and not non_empty_string(issue.get("confidence_rationale")):
+            add_error(errors, f"{path}.confidence_rationale", "is required for low or medium confidence issues")
+        if "confidence_rationale" in issue and not non_empty_string(issue["confidence_rationale"]):
+            add_error(errors, f"{path}.confidence_rationale", "must be a non-empty string")
+        if "friction_score" in issue:
+            validate_int_range(issue["friction_score"], f"{path}.friction_score", errors, minimum=0, maximum=5)
+        if "perceived_latency_ms" in issue:
+            validate_int_range(issue["perceived_latency_ms"], f"{path}.perceived_latency_ms", errors, minimum=0)
+        for field in OPTIONAL_ISSUE_STRING_LISTS:
+            if field in issue and not list_of_strings(issue[field]):
+                add_error(errors, f"{path}.{field}", "must be an array of non-empty strings")
 
 
 def validate_report(data: Any) -> list[str]:
@@ -166,9 +210,14 @@ def validate_report(data: Any) -> list[str]:
         if field not in data:
             add_error(errors, field, "is required")
 
+    if "schema_version" in data and data["schema_version"] != SCHEMA_VERSION:
+        add_error(errors, "schema_version", f"must be {SCHEMA_VERSION!r}")
+
     for field in ["run_id", "app_url", "overall_sentiment"]:
         if field in data and not non_empty_string(data[field]):
             add_error(errors, field, "must be a non-empty string")
+    if "app_context" in data and not non_empty_string(data["app_context"]):
+        add_error(errors, "app_context", "must be a non-empty string")
 
     if "timestamp" in data:
         validate_timestamp(data["timestamp"], errors)
@@ -176,14 +225,17 @@ def validate_report(data: Any) -> list[str]:
         validate_persona(data["persona"], errors)
     if "viewport" in data:
         validate_viewport(data["viewport"], errors)
-    if "tasks_attempted" in data and not list_of_strings(data["tasks_attempted"]):
-        add_error(errors, "tasks_attempted", "must be an array of non-empty strings")
+    if "tasks_attempted" in data and not list_of_strings(data["tasks_attempted"], allow_empty=False):
+        add_error(errors, "tasks_attempted", "must be a non-empty array of non-empty strings")
     if "task_outcomes" in data:
         validate_task_outcomes(data["task_outcomes"], errors)
     if "issues" in data:
         validate_issues(data["issues"], errors)
     if "top_recommendations" in data and not list_of_strings(data["top_recommendations"]):
         add_error(errors, "top_recommendations", "must be an array of non-empty strings")
+    for field in OPTIONAL_STRING_LISTS:
+        if field in data and not list_of_strings(data[field]):
+            add_error(errors, field, "must be an array of non-empty strings")
 
     return errors
 
@@ -194,8 +246,9 @@ def load_json(path: Path) -> Any:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Validate one beta-test-app run report JSON file.")
+    parser = argparse.ArgumentParser(description="Validate one beta-test-app v2 run report JSON file.")
     parser.add_argument("report", help="Path to a run-NNN.json report file.")
+    parser.add_argument("--quiet", action="store_true", help="Only print output when validation fails.")
     args = parser.parse_args(argv)
 
     path = Path(args.report)
@@ -212,11 +265,13 @@ def main(argv: list[str] | None = None) -> int:
     result = {
         "valid": not errors,
         "file": str(path),
+        "schema_version": data.get("schema_version") if isinstance(data, dict) else None,
         "run_id": data.get("run_id") if isinstance(data, dict) else None,
         "issue_count": len(data.get("issues", [])) if isinstance(data, dict) and isinstance(data.get("issues"), list) else 0,
         "errors": errors,
     }
-    print(json.dumps(result, indent=2, sort_keys=True))
+    if errors or not args.quiet:
+        print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if not errors else 1
 
 

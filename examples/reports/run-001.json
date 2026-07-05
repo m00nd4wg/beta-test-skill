@@ -1,0 +1,90 @@
+{
+  "schema_version": "2.0",
+  "run_id": "run-001",
+  "timestamp": "2026-07-05T10:00:00Z",
+  "app_url": "http://localhost:4173",
+  "app_context": "A demo SaaS landing page and checkout flow for indie builders.",
+  "persona": {
+    "label": "Launch-week indie founder",
+    "context": "Wants quick confidence that the product is real before joining a waitlist.",
+    "technical_comfort": "high",
+    "domain_familiarity": "high",
+    "goals": [
+      "Understand the product in under a minute",
+      "Compare pricing",
+      "Try the primary signup path"
+    ],
+    "biases": [
+      "Skims pages quickly and dislikes vague AI claims"
+    ]
+  },
+  "viewport": {
+    "device_label": "desktop",
+    "width": 1440,
+    "height": 900
+  },
+  "tasks_attempted": [
+    "Understand the hero section",
+    "Open pricing",
+    "Start signup"
+  ],
+  "task_outcomes": [
+    {
+      "task": "Understand the hero section",
+      "status": "partial",
+      "notes": "The broad promise was appealing but the exact output was not obvious until scrolling.",
+      "friction_score": 2
+    },
+    {
+      "task": "Start signup",
+      "status": "partial",
+      "notes": "The CTA appeared to freeze for a few seconds after clicking.",
+      "friction_score": 3,
+      "duration_ms": 4200
+    }
+  ],
+  "issues": [
+    {
+      "title": "Signup CTA gives no progress feedback",
+      "fingerprint": "signup-cta-no-progress-feedback",
+      "category": "performance",
+      "severity": "medium",
+      "confidence": "medium",
+      "confidence_rationale": "Observed once during the primary signup task.",
+      "where_seen": "Hero CTA",
+      "steps_to_reproduce": [
+        "Open the landing page",
+        "Click Start beta test",
+        "Wait for a visible state change"
+      ],
+      "expected": "The CTA should show loading or move to the next step promptly.",
+      "actual": "Nothing changed for about 4 seconds.",
+      "evidence": [
+        "Observed no loading text or spinner after click"
+      ],
+      "tester_reaction": "I would probably click again because it feels like the button missed my click.",
+      "friction_score": 3,
+      "perceived_latency_ms": 4200,
+      "screenshots": [
+        "evidence/run-001-home.png"
+      ],
+      "console_errors": [],
+      "network_errors": []
+    }
+  ],
+  "overall_sentiment": "The idea is useful, but the signup moment feels fragile right when I am deciding whether to trust it.",
+  "top_recommendations": [
+    "Add immediate progress feedback to the primary CTA.",
+    "Show a concrete report preview above the fold."
+  ],
+  "assumptions": [
+    "The demo app is safe test data."
+  ],
+  "safety_notes": [
+    "No payment or production action was attempted."
+  ],
+  "evidence_manifest_paths": [
+    "evidence/manifest.json"
+  ]
+}
+

@@ -1,0 +1,15 @@
+{
+  "name": "beta-test-skill-runner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Optional Playwright evidence runner for beta-test-skill.",
+  "type": "commonjs",
+  "scripts": {
+    "help": "node evidence-runner.js --help",
+    "capture": "node evidence-runner.js capture"
+  },
+  "dependencies": {
+    "playwright": "^1.46.0"
+  }
+}
+
